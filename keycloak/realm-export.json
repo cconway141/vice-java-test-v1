@@ -1,0 +1,77 @@
+{
+  "realm": "homebuilder",
+  "enabled": true,
+  "accessTokenLifespan": 3600,
+  "roles": {
+    "realm": [
+      { "name": "builder" },
+      { "name": "customer" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "homebuilder-api",
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "redirectUris": ["http://localhost:8080/*"],
+      "protocolMappers": [
+        {
+          "name": "customer_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "customer_id",
+            "claim.name": "customer_id",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "providerId": "declarative-user-profile",
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\":[{\"name\":\"username\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"email\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"customer_id\",\"displayName\":\"customer_id\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]},\"multivalued\":false}]}"
+          ]
+        }
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "builder1",
+      "enabled": true,
+      "email": "builder1@example.com",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "password" }],
+      "realmRoles": ["builder"]
+    },
+    {
+      "username": "customer100",
+      "enabled": true,
+      "email": "customer100@example.com",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "password" }],
+      "attributes": { "customer_id": ["cust-100"] },
+      "realmRoles": ["customer"]
+    },
+    {
+      "username": "customer200",
+      "enabled": true,
+      "email": "customer200@example.com",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "password" }],
+      "attributes": { "customer_id": ["cust-200"] },
+      "realmRoles": ["customer"]
+    }
+  ]
+}
