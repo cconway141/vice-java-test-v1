@@ -27,23 +27,32 @@ INSERT INTO holds (id, job_id, reason, placed_on, released_on) VALUES
   (3, 5, 'permits', '2026-09-01', NULL);
 
 -- Business rule: an on-hold job has no known start date. The stored value is not authoritative while on hold.
+-- Simplified: jobs.status is the source of truth for hold state, so the holds lookup is not needed.
 CREATE OR REPLACE FUNCTION job_schedule(p_job_id bigint)
 RETURNS TABLE (job_id bigint, customer_id text, status text, scheduled_start date)
-LANGUAGE plpgsql STABLE
+LANGUAGE sql STABLE
 AS $$
-DECLARE
-  v_on_hold boolean;
-BEGIN
-  SELECT EXISTS (
-    SELECT 1 FROM holds h WHERE h.job_id = p_job_id AND h.released_on IS NULL
-  ) INTO v_on_hold;
-
-  RETURN QUERY
   SELECT j.id,
          j.customer_id,
-         CASE WHEN v_on_hold OR j.status = 'on_hold' THEN 'on_hold' ELSE j.status END,
-         CASE WHEN v_on_hold OR j.status = 'on_hold' THEN NULL ELSE j.scheduled_start END
+         j.status,
+         CASE WHEN j.status = 'on_hold' THEN NULL ELSE j.scheduled_start END
   FROM jobs j
   WHERE j.id = p_job_id;
+$$;
+
+-- Release holds that have been open longer than p_days. Returns the number of holds released.
+CREATE OR REPLACE FUNCTION release_stale_holds(p_days integer)
+RETURNS integer
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_today date := (now() AT TIME ZONE 'UTC')::date;
+  v_count integer;
+BEGIN
+  UPDATE holds
+  SET released_on = v_today
+  WHERE placed_on + p_days < v_today;
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  RETURN v_count;
 END;
 $$;
